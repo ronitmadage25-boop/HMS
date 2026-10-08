@@ -1,0 +1,13 @@
+{
+  "name": "hostel-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm install --prefix server && npm install --prefix client",
+    "seed": "npm run seed --prefix server",
+    "dev": "concurrently -n api,web -c blue,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm run build && npm start --prefix server"
+  },
+  "devDependencies": { "concurrently": "^8.2.2" }
+}

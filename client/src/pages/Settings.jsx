@@ -1,0 +1,21 @@
+import { useEffect, useState } from 'react';
+import { api, msg } from '../api';
+import { useLoad, Loading, PageHeader, Field, toast } from '../components/ui';
+
+export default function Settings() {
+  const { data, loading } = useLoad(() => api.get('/settings').then((r) => r.data), []);
+  const rooms = useLoad(() => api.get('/rooms/summary').then((r) => r.data.blocks.map((b) => b.block)), []);
+  const [s, setS] = useState(null);
+  useEffect(() => { if (data) setS({ ...data, applicationDeadline: data.applicationDeadline?.slice(0, 10) || '' }); }, [data]);
+  if (loading || !s) return <Loading />;
+  const save = async () => { try { await api.put('/settings', { ...s, applicationDeadline: s.applicationDeadline || null, maxVisitors: Number(s.maxVisitors), lateFeeAmount: Number(s.lateFeeAmount) }); toast.ok('Settings saved'); } catch (e) { toast.err(msg(e)); } };
+  const bh = (b, k, v) => setS({ ...s, blockHours: { ...s.blockHours, [b]: { ...(s.blockHours[b] || s.visitingHours), [k]: v } } });
+  return (<><PageHeader title="Settings" subtitle="System-wide rules used by applications, visitors, complaints and fees." actions={<button className="btn-primary" onClick={save}>Save settings</button>} />
+    <div className="grid gap-6 lg:grid-cols-2">
+      <section className="card space-y-4 p-6"><h3 className="font-semibold">Institution and session</h3><Field label="Institution name"><input className="input" value={s.institution} onChange={(e) => setS({ ...s, institution: e.target.value })} /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Current session"><input className="input" value={s.session} onChange={(e) => setS({ ...s, session: e.target.value })} /></Field><Field label="Application deadline"><input type="date" className="input" value={s.applicationDeadline} onChange={(e) => setS({ ...s, applicationDeadline: e.target.value })} /></Field></div><Field label="Late-fee surcharge (₹)" hint="Added once to any balance unpaid after the due date."><input type="number" min="0" className="input" value={s.lateFeeAmount} onChange={(e) => setS({ ...s, lateFeeAmount: e.target.value })} /></Field></section>
+      <section className="card space-y-4 p-6"><h3 className="font-semibold">Visitors</h3><div className="grid gap-4 sm:grid-cols-3"><Field label="Opens"><input type="time" className="input" value={s.visitingHours.start} onChange={(e) => setS({ ...s, visitingHours: { ...s.visitingHours, start: e.target.value } })} /></Field><Field label="Closes"><input type="time" className="input" value={s.visitingHours.end} onChange={(e) => setS({ ...s, visitingHours: { ...s.visitingHours, end: e.target.value } })} /></Field><Field label="Max inside per student"><input type="number" min="1" className="input" value={s.maxVisitors} onChange={(e) => setS({ ...s, maxVisitors: e.target.value })} /></Field></div>
+        {(rooms.data || []).length > 0 && <div><p className="mb-2 text-sm font-medium">Per-block visiting hours</p><div className="space-y-2">{rooms.data.map((b) => <div key={b} className="flex items-center gap-3 text-sm"><span className="w-20 font-semibold">Block {b}</span><input type="time" className="input !w-auto" value={(s.blockHours[b] || s.visitingHours).start} onChange={(e) => bh(b, 'start', e.target.value)} /><span>to</span><input type="time" className="input !w-auto" value={(s.blockHours[b] || s.visitingHours).end} onChange={(e) => bh(b, 'end', e.target.value)} /></div>)}</div></div>}</section>
+      <section className="card space-y-4 p-6"><h3 className="font-semibold">Complaint resolution targets (hours)</h3><div className="grid gap-4 sm:grid-cols-3">{Object.keys(s.resolutionHours).map((k) => <Field key={k} label={k}><input type="number" min="1" className="input" value={s.resolutionHours[k]} onChange={(e) => setS({ ...s, resolutionHours: { ...s.resolutionHours, [k]: Number(e.target.value) } })} /></Field>)}</div></section>
+      <section className="card space-y-4 p-6"><h3 className="font-semibold">Work order targets by priority (hours)</h3><div className="grid gap-4 sm:grid-cols-4">{Object.keys(s.maintenanceSla).map((k) => <Field key={k} label={k}><input type="number" min="1" className="input" value={s.maintenanceSla[k]} onChange={(e) => setS({ ...s, maintenanceSla: { ...s.maintenanceSla, [k]: Number(e.target.value) } })} /></Field>)}</div></section>
+    </div></>);
+}

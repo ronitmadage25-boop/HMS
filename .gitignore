@@ -1,0 +1,13 @@
+node_modules
+client/dist
+.env
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
+server/.env
+client/.env
+_supabase_backup
+server/uploads/*
+!server/uploads/.gitkeep
