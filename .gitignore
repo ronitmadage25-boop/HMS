@@ -1,5 +1,6 @@
 node_modules
 client/dist
+.vercel
 .env
 .env.*
 !.env.example

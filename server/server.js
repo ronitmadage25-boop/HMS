@@ -87,3 +87,5 @@ mongoose.connect(uri).then(async () => {
   const port = process.env.PORT || 5000;
   app.listen(port, () => console.log(`✔ API running on http://localhost:${port}`));
 }).catch((e) => { console.error('✖ Could not connect to MongoDB:', e.message); process.exit(1); });
+
+export default app;
