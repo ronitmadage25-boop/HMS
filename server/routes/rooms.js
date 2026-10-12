@@ -23,7 +23,7 @@ r.get('/available', allow('student'), async (req, res) => {
 });
 r.get('/summary', allow('warden', 'staff', 'admin'), async (req, res) => res.json(summarize(await listRooms())));
 r.get('/', allow('warden', 'staff', 'admin'), async (req, res) => {
-  const f = {}; ['block', 'floor', 'type'].forEach((k) => { if (req.query[k]) f[k] = k === 'floor' ? Number(req.query[k]) : req.query[k]; });
+  const f = {};['block', 'floor', 'type'].forEach((k) => { if (req.query[k]) f[k] = k === 'floor' ? Number(req.query[k]) : req.query[k]; });
   let rooms = await listRooms(f);
   if (req.query.state) rooms = rooms.filter((x) => x.state === req.query.state);
   res.json(rooms);

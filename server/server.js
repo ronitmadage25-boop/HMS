@@ -45,6 +45,11 @@ app.use('/api/settings', settings);
 app.use('/api/rooms', rooms);
 app.use('/api/applications', applications);
 app.use('/api/allocations', allocations);
+app.use('/api/fees', (req, res, next) => {
+  console.log('[FEES REQUEST]', req.method, req.originalUrl);
+  next();
+});
+
 app.use('/api/fees', fees);
 app.use('/api/visitors', visitors);
 app.use('/api/complaints', complaints);
@@ -62,12 +67,15 @@ if (fs.existsSync(dist)) {
 }
 app.use((err, req, res, next) => {
   if (err.name === 'ValidationError') return res.status(400).json({ message: Object.values(err.errors).map((e) => e.message).join(', ') });
-  if (err.code === 11000) return res.status(409).json({ message: 'That record already exists' });
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern || {})[0] || 'field';
+    return res.status(409).json({ message: `An account or record with that ${field} already exists.` });
+  }
   if (err.name === 'MulterError') return res.status(400).json({ message: err.code === 'LIMIT_FILE_SIZE' ? 'File is larger than 2 MB' : err.message });
   if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid reference' });
   const status = err.status || 500;
-  if (status >= 500) console.error(err);
-  res.status(status).json({ message: status >= 500 ? 'Something went wrong on the server' : err.message, ...(err.extra || {}) });
+  if (status >= 500) console.error('Server error:', err);
+  res.status(status).json({ message: err.message || 'Something went wrong on the server', ...(err.extra || {}) });
 });
 
 async function bootstrap() {

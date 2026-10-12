@@ -78,13 +78,63 @@ export const Application = model('Application', new Schema({
   decidedAt: Date,
 }, T));
 
+// const allocSchema = new Schema({
+//   student: oid('User', { required: true, index: true }),
+//   application: oid('Application'),
+//   room: oid('Room', { required: true, index: true }),
+//   bed: { type: Number, required: true },
+//   session: String,
+//   status: { type: String, enum: ['Allocated', 'CheckedIn', 'CheckedOut', 'Vacated', 'NoShow'], default: 'Allocated' },
+//   bedKey: String,
+//   letterNo: String,
+//   allocatedBy: oid('User'),
+//   allocatedAt: { type: Date, default: Date.now },
+//   checkInAt: Date,
+//   checkOutAt: Date,
+//   endedAt: Date,
+//   endReason: String,
+// }, T);
+// allocSchema.index({ bedKey: 1 }, { unique: true, sparse: true });
+// export const Allocation = model('Allocation', allocSchema);
+
+
+
 const allocSchema = new Schema({
   student: oid('User', { required: true, index: true }),
   application: oid('Application'),
   room: oid('Room', { required: true, index: true }),
   bed: { type: Number, required: true },
   session: String,
-  status: { type: String, enum: ['Allocated', 'CheckedIn', 'CheckedOut', 'Vacated', 'NoShow'], default: 'Allocated' },
+
+  status: {
+    type: String,
+    enum: [
+      'Allocated',
+      'CheckedIn',
+      'CheckedOut',
+      'Vacated',
+      'NoShow',
+    ],
+    default: 'Allocated',
+  },
+
+  // Student must confirm the room before invoice generation
+  roomConfirmationStatus: {
+    type: String,
+    enum: ['Pending', 'Accepted', 'ChangeRequested'],
+    default: 'Pending',
+    index: true,
+  },
+  roomConfirmationAt: {
+    type: Date,
+    default: null,
+  },
+  roomChangeReason: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+
   bedKey: String,
   letterNo: String,
   allocatedBy: oid('User'),
@@ -94,7 +144,9 @@ const allocSchema = new Schema({
   endedAt: Date,
   endReason: String,
 }, T);
+
 allocSchema.index({ bedKey: 1 }, { unique: true, sparse: true });
+
 export const Allocation = model('Allocation', allocSchema);
 
 export const RoomChange = model('RoomChange', new Schema({
@@ -148,20 +200,58 @@ invoiceSchema.pre('save', function (next) {
   }
   next();
 });
+invoiceSchema.index(
+  { allocation: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      allocation: { $type: 'objectId' },
+      status: { $in: ['Pending', 'Partial', 'Paid', 'Overdue'] },
+    },
+  }
+);
 export const Invoice = model('Invoice', invoiceSchema);
 
-export const Payment = model('Payment', new Schema({
+// export const Payment = model('Payment', new Schema({
+//   invoice: oid('Invoice', { required: true, index: true }),
+//   student: oid('User', { required: true }),
+//   amount: { type: Number, required: true },
+//   method: String,
+//   txnRef: String,
+//   gatewayOrderId: String,
+//   status: { type: String, enum: ['Created', 'Success', 'Failed'], default: 'Created' },
+//   failureReason: String,
+//   paidAt: Date,
+// }, T));
+
+const paymentSchema = new Schema({
   invoice: oid('Invoice', { required: true, index: true }),
   student: oid('User', { required: true }),
   amount: { type: Number, required: true },
   method: String,
   txnRef: String,
   gatewayOrderId: String,
-  status: { type: String, enum: ['Created', 'Success', 'Failed'], default: 'Created' },
+  status: {
+    type: String,
+    enum: ['Created', 'Success', 'Failed'],
+    default: 'Created',
+  },
   failureReason: String,
   paidAt: Date,
-}, T));
+}, T);
 
+paymentSchema.index(
+  { txnRef: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: 'Success',
+      txnRef: { $type: 'string' },
+    },
+  }
+);
+
+export const Payment = model('Payment', paymentSchema);
 export const Receipt = model('Receipt', new Schema({
   number: { type: String, required: true, unique: true },
   payment: oid('Payment'),
